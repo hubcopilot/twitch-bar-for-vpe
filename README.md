@@ -15,3 +15,5 @@ Chat can type `!hit` to reduce HP, while mods and trusted users can `!heal` or `
 1. Clone the repo:
    ```bash
    git clone https://github.com/YOUR-USERNAME/hp-bar-twitch.git
+
+   use this link: https://hubcopilot.github.io/twitch-bar-for-vpe/
