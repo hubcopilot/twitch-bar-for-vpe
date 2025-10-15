@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>HP Bar with Event Panel</title>
+  <title>HP Bar Styled with Event Panel</title>
   <style>
     body {
       margin: 0;
@@ -11,147 +11,177 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 15px; /* space between bars */
+      gap: 15px;
     }
 
-    /* Shared style for panels */
+    /* Wrapper so both panels can shake together */
+    .hp-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      position: relative;
+    }
+
+    /* Shared pink container style */
     .panel {
       position: relative;
-      width: 600px;
-      height: 70px;
-      background: #333; 
-      border-radius: 35px;
+      width: 400px;
+      height: 50px;
+      background: #f8aee3;
+      border-radius: 25px;
       overflow: hidden;
       display: flex;
       align-items: center;
+      padding-left: 60px;
       justify-content: center;
-      padding: 5px 10px;
     }
 
-    /* HP bar inside top panel */
+    /* HP fill bar */
     .hp-bar {
       height: 100%;
-      border-radius: 35px;
+      background: linear-gradient(90deg, #7CFC00, #32CD32);
+      border-radius: 25px;
       text-align: center;
-      line-height: 60px;
+      line-height: 50px;
       font-weight: bold;
       color: white;
-      transition: width 0.3s, background 0.3s;
+      transition: width 0.3s;
+      position: relative;
     }
 
+    /* Red flash overlay */
+    .hp-bar::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 25px;
+      background: rgba(255, 0, 0, 0.5);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    .hp-bar.flash::after {
+      opacity: 1;
+    }
+
+    /* HP text */
     .hp-text {
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 20px;
+      font-size: 14px;
       font-weight: bold;
       color: #fff;
+      text-shadow: 1px 1px 2px black;
     }
 
     /* Profile circle */
     .profile {
       position: absolute;
-      right: -40px;
-      top: -10px;
-      width: 80px;
-      height: 80px;
+      left: -5px;
+      top: -5px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
-      border: 4px solid white;
+      border: 3px solid white;
       overflow: hidden;
-      transition: box-shadow 0.3s ease-in-out;
+      background: #000;
     }
 
     .profile img {
       width: 100%;
       height: 100%;
+      object-fit: cover;
     }
 
-    /* Glow pulse on HP change */
-    .profile.glow {
-      box-shadow: 0 0 20px #ff69b4, 0 0 30px #39ff14;
-    }
-
+    /* Username under bar */
     .username {
       position: absolute;
-      bottom: -25px;
+      top: 55px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 16px;
-      color: #fff;
+      font-size: 14px;
       font-weight: bold;
+      color: #fff;
       text-shadow: 1px 1px 2px black;
     }
 
-    /* Game Over Overlay */
-    #game-over {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 70px;
-      font-weight: bold;
-      color: red;
-      text-shadow: 2px 2px 8px black;
-      display: none;
-      animation: fadePulse 2s infinite ease-in-out;
-    }
-
-    @keyframes fadePulse {
-      0%   { opacity: 0; transform: translate(-50%, -50%) scale(1); }
-      50%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
-    }
-
-    /* Second panel (event log) */
+    /* Event log panel */
     #event-log {
       width: 100%;
       text-align: center;
-      font-size: 22px;
+      font-size: 16px;
       font-weight: bold;
-      color: #fff;
+      text-shadow: 1px 1px 2px black;
       opacity: 1;
-      transition: opacity 0.5s ease-in-out;
+      transition: opacity 0.5s ease-in-out, color 0.3s ease-in-out;
+      color: #fff;
     }
 
     .hidden {
       opacity: 0;
     }
+
+    /* Event colors */
+    .hit { color: #ff4d4d; }
+    .heal { color: #39ff14; }
+    .reset { color: #66a3ff; }
+
+    /* Shake animation (multi-directional) */
+    .shake {
+      animation: shakeAnim 0.6s;
+    }
+
+    @keyframes shakeAnim {
+      0%   { transform: translate(0, 0); }
+      15%  { transform: translate(-5px, -5px); }
+      30%  { transform: translate(5px, -3px); }
+      45%  { transform: translate(-4px, 4px); }
+      60%  { transform: translate(4px, 3px); }
+      75%  { transform: translate(-3px, -4px); }
+      100% { transform: translate(0, 0); }
+    }
   </style>
 </head>
 <body>
-  <!-- Top HP Panel -->
-  <div class="panel">
-    <div id="hp-bar" class="hp-bar"></div>
-    <div id="hp-text" class="hp-text">HP: 1000/1000</div>
-    <div class="profile">
-      <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png" alt="profile">
+  <div class="hp-wrapper" id="hp-wrapper">
+    <!-- HP Panel -->
+    <div class="panel">
+      <div id="hp-bar" class="hp-bar"></div>
+      <div id="hp-text" class="hp-text">HP: 1000/1000</div>
+      <div class="profile">
+        <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png" alt="profile">
+      </div>
+      <div class="username">ryaah</div>
     </div>
-    <div class="username">ryaah</div>
-  </div>
 
-  <!-- Second Panel: Event Log -->
-  <div class="panel">
-    <div id="event-log">ryaah</div>
+    <!-- Event Log Panel -->
+    <div class="panel">
+      <div id="event-log">ryaah</div>
+    </div>
   </div>
-
-  <div id="game-over">GAME OVER</div>
 
   <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5"></script>
   <script>
     // Settings
     let maxHP = 1000;
     let currentHP = 1000;
-    const damage = 25;     // "!hit"
-    const healAmount = 25; // "!heal"
+    const damage = 25;
+    const healAmount = 25;
     const defaultName = "ryaah";
 
-    // ✅ Whitelist (trusted mods or users, lowercase only)
+    // ✅ Whitelist
     const whitelist = ["acek47shawty", "shadowcast_dj"];
 
     const hpBar = document.getElementById("hp-bar");
     const hpText = document.getElementById("hp-text");
-    const gameOver = document.getElementById("game-over");
     const eventLog = document.getElementById("event-log");
+    const hpWrapper = document.getElementById("hp-wrapper");
 
     let resetTimeout = null;
 
@@ -159,50 +189,39 @@
       const percent = (currentHP / maxHP) * 100;
       hpBar.style.width = percent + "%";
       hpText.textContent = `HP: ${currentHP}/${maxHP}`;
-
-      // Change bar color based on HP %
-      if (percent > 60) {
-        hpBar.style.background = "linear-gradient(90deg, #28ff28, #00b300)"; // green
-      } else if (percent > 30) {
-        hpBar.style.background = "linear-gradient(90deg, #ffff66, #ffcc00)"; // yellow
-      } else {
-        hpBar.style.background = "linear-gradient(90deg, #ff4d4d, #b30000)"; // red
-      }
-
-      // Show/hide GAME OVER
-      if (currentHP <= 0) {
-        currentHP = 0;
-        hpBar.style.width = "0%";
-        gameOver.style.display = "block"; 
-      } else {
-        gameOver.style.display = "none"; 
-      }
-
-      // Glow effect on profile
-      const profile = document.querySelector(".profile");
-      profile.classList.add("glow");
-      setTimeout(() => profile.classList.remove("glow"), 500);
     }
 
-    function showEvent(message) {
-      // Clear old timeout if active
+    function showEvent(message, typeClass) {
       if (resetTimeout) clearTimeout(resetTimeout);
 
-      // Fade out
       eventLog.classList.add("hidden");
       setTimeout(() => {
         eventLog.textContent = message;
+        eventLog.className = "";
+        eventLog.id = "event-log";
+        if (typeClass) eventLog.classList.add(typeClass);
         eventLog.classList.remove("hidden");
       }, 500);
 
-      // After 5s, return to default username
       resetTimeout = setTimeout(() => {
         eventLog.classList.add("hidden");
         setTimeout(() => {
           eventLog.textContent = defaultName;
+          eventLog.className = "";
+          eventLog.id = "event-log";
           eventLog.classList.remove("hidden");
         }, 500);
       }, 5000);
+    }
+
+    function shakeWrapper() {
+      hpWrapper.classList.add("shake");
+      setTimeout(() => hpWrapper.classList.remove("shake"), 600);
+    }
+
+    function flashHPBar() {
+      hpBar.classList.add("flash");
+      setTimeout(() => hpBar.classList.remove("flash"), 200);
     }
 
     // Twitch chat connection
@@ -220,27 +239,27 @@
       if (cmd === "!hit") {
         currentHP = Math.max(0, currentHP - damage);
         updateHP();
-        showEvent("ryaah got hit!");
+        showEvent("ryaah got hit!", "hit");
+        shakeWrapper();   // ✅ shake
+        flashHPBar();     // ✅ red flash
       }
 
-      // Allowed if broadcaster, mod, or in whitelist
       const isAllowed = tags.mod || tags.badges?.broadcaster || whitelist.includes(user);
 
       if (isAllowed) {
         if (cmd === "!heal") {
           currentHP = Math.min(maxHP, currentHP + healAmount);
           updateHP();
-          showEvent("ryaah got healed!");
+          showEvent("ryaah got healed!", "heal");
         }
         if (cmd === "!reset") {
           currentHP = maxHP;
           updateHP();
-          showEvent("ryaah HP reset!");
+          showEvent("ryaah HP reset!", "reset");
         }
       }
     });
 
-    // Initialize
     updateHP();
   </script>
 </body>
