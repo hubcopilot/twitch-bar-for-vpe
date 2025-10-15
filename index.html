@@ -6,11 +6,12 @@
   <script src="https://cdn.jsdelivr.net/npm/tmi.js/dist/tmi.min.js"></script>
   <style>
     :root{
-      --hp-fill:#89F336;
-      --hp-damage:#777777;
-      --event-bg:#B3FBF2;
-      --text:#000000;
-      --hp-bg:#1d3d1d;
+      --hp-fill:#89F336;       /* lime green */
+      --hp-damage:#89F336;     /* also lime green for overlay */
+      --event-bg:#B3FBF2;      /* aqua event panel */
+      --text:#ffffff;          /* white text */
+      --hp-bg:#89F336;         /* lime green HP background */
+      --profile-bg:#ff69b4;    /* pink profile circle */
     }
     body{margin:0;background:transparent;font-family:Arial,Helvetica,sans-serif;}
 
@@ -19,34 +20,56 @@
     .topbar button{padding:8px 12px;border:none;border-radius:8px;background:#222;color:#fff;font-weight:bold;cursor:pointer;}
     .badge{font-size:12px;padding:6px 10px;border-radius:999px;background:#eee;}
 
-    .stage{min-height:120px;display:flex;align-items:center;justify-content:center;padding-top:64px;}
-    .hp-wrapper{display:flex;flex-direction:column;align-items:center;transition:opacity .5s ease;}
-    .hidden{display:none!important;}
+    .stage{min-height:120px;display:flex;align-items:center;justify-content:center;padding-top:64px;position:relative;}
 
+    /* Shared fade logic */
+    .fade-container {
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .7s ease;
+      position:absolute;
+      top:0; left:50%; transform:translateX(-50%);
+      width:100%;
+      display:flex; justify-content:center; align-items:center;
+    }
+    .fade-container.show {
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .hp-wrapper{flex-direction:column;align-items:center;}
     .hp-event-wrapper{width:420px;border:2px solid #000;border-radius:30px;overflow:hidden;box-shadow:0 6px 16px rgba(0,0,0,.3);}
 
     .hp-panel{width:100%;height:55px;background:var(--hp-bg);padding-left:80px;position:relative;}
     .hp-container{position:relative;width:100%;height:100%;border-radius:28px;overflow:hidden;}
-    .hp-bar-grey,.hp-bar{position:absolute;left:0;top:0;bottom:0;border-radius:28px;}
-    .hp-bar-grey{background:var(--hp-damage);width:100%;opacity:1;transition:width 1s ease,opacity 1s ease;}
+    .hp-bar-grey,.hp-bar{position:absolute;left:0;top:0;bottom:0;border-radius:28px;transition:background 0.3s ease;}
+    .hp-bar-grey{background:var(--hp-damage);width:100%;opacity:1;transition:width 1s ease,opacity 1s ease,background 0.3s ease;}
     .hp-bar-grey.fade{opacity:0;}
-    .hp-bar{background:var(--hp-fill);width:100%;transition:width .3s ease;position:relative;overflow:hidden;}
+    .hp-bar{background:var(--hp-fill);width:100%;transition:width .3s ease,background 0.3s ease;position:relative;overflow:hidden;}
     .hp-bar::before{content:"";position:absolute;inset:0;border-radius:28px;background:linear-gradient(to bottom,rgba(255,255,255,.35) 0%,rgba(255,255,255,.08) 40%,rgba(255,255,255,0) 100%);}
-    .hp-bar.flash{background:#ff4d4d;}
+    .hp-bar.flash,.hp-bar-grey.flash{background:#ff4d4d;} /* flash red */
     .hp-bar.ko { animation: koFlash 1.2s ease; }
     .hp-text{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:15px;font-weight:bold;color:var(--text);}
 
-    .profile{position:absolute;left:-10px;top:-10px;width:70px;height:70px;border-radius:50%;border:3px solid #fff;overflow:hidden;background:#000;box-shadow:0 4px 10px rgba(0,0,0,.4);}
+    .profile{position:absolute;left:-10px;top:-10px;width:70px;height:70px;border-radius:50%;border:3px solid #fff;overflow:hidden;background:var(--profile-bg);box-shadow:0 4px 10px rgba(0,0,0,.4);}
     .profile img{width:100%;height:100%;object-fit:contain;}
-    .username{position:absolute;top:60px;left:50%;transform:translateX(-50%);font-size:14px;font-weight:bold;color:var(--text);}
+    .username{position:absolute;top:60px;left:50%;transform:translateX(-50%);font-size:14px;font-weight:bold;color:#ffffff;} /* always white */
     .capsule-status{position:absolute;top:78px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:bold;opacity:.85;}
     .capsule-status.connected{color:#00aa00;}
     .capsule-status.disconnected{color:#aa0000;}
 
     .event-panel{width:100%;height:42px;background:var(--event-bg);border-radius:0 0 30px 30px;position:relative;overflow:hidden;}
     .event-panel::before{content:"";position:absolute;inset:0;border-radius:0 0 30px 30px;background:linear-gradient(to bottom,rgba(255,255,255,.25) 0%,rgba(255,255,255,.08) 40%,rgba(255,255,255,0) 100%);}
-    #event-log{width:100%;text-align:center;font-size:17px;font-weight:bold;line-height:42px;color:var(--text);transition:opacity .5s ease,color .3s ease;position:relative;z-index:1;}
-    .hit{color:#ff4d4d;} .heal{color:#39ff14;} .reset{color:#0066cc;}
+    #event-log{
+      width:100%;text-align:center;font-size:17px;font-weight:bold;line-height:42px;
+      color:#ffffff; /* default white */
+      transition: color 0.4s ease;
+      position:relative;z-index:1;
+    }
+    /* Flash states */
+    #event-log.flash-hit { color:#ff4d4d; }
+    #event-log.flash-heal { color:#39ff14; }
+    #event-log.flash-reset { color:#0066cc; }
 
     .shake{animation:shakeAnim .6s;}
     @keyframes shakeAnim{0%,100%{transform:translate(0,0);}15%{transform:translate(-5px,-5px);}30%{transform:translate(5px,-3px);}45%{transform:translate(-4px,4px);}60%{transform:translate(4px,3px);}75%{transform:translate(-3px,-4px);}}
@@ -57,21 +80,8 @@
     }
 
     /* Game Over screen */
-    .gameover-screen {
-      display:none;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      animation:fadeIn .8s forwards;
-    }
-    .gameover-text {
-      font-size:60px;
-      font-weight:bold;
-      color:#ff3333;
-      text-shadow:0 0 20px #ff0000,0 0 40px #ff0000;
-    }
-    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+    .gameover-screen {flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+    .gameover-text {font-size:60px;font-weight:bold;color:#ff3333;text-shadow:0 0 20px #ff0000,0 0 40px #ff0000;}
   </style>
 </head>
 <body>
@@ -83,47 +93,48 @@
 
   <div class="stage">
     <!-- HP UI -->
-    <div class="hp-wrapper" id="hp-wrapper">
-      <div class="hp-event-wrapper">
-        <div class="hp-panel">
-          <div class="hp-container">
-            <div id="hp-bar-grey" class="hp-bar-grey"></div>
-            <div id="hp-bar" class="hp-bar"></div>
-            <div id="hp-text" class="hp-text">HP: 1000/1000</div>
+    <div id="hp-wrapper" class="fade-container show">
+      <div class="hp-wrapper">
+        <div class="hp-event-wrapper">
+          <div class="hp-panel">
+            <div class="hp-container">
+              <div id="hp-bar-grey" class="hp-bar-grey"></div>
+              <div id="hp-bar" class="hp-bar"></div>
+              <div id="hp-text" class="hp-text">HP: 500/500</div>
+            </div>
+            <div class="profile">
+              <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png">
+            </div>
+            <div id="username" class="username">ryaah</div>
+            <div id="capsuleStatus" class="capsule-status disconnected">Disconnected</div>
           </div>
-          <div class="profile">
-            <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png">
-          </div>
-          <div id="username" class="username">ryaah</div>
-          <div id="capsuleStatus" class="capsule-status disconnected">Disconnected</div>
+          <div class="event-panel"><div id="event-log">ryaah</div></div>
         </div>
-        <div class="event-panel"><div id="event-log">ryaah</div></div>
       </div>
     </div>
 
     <!-- Game Over Screen -->
-    <div id="gameOver" class="gameover-screen">
+    <div id="gameOver" class="fade-container gameover-screen">
       <div class="gameover-text">GAME OVER</div>
     </div>
   </div>
 
 <script>
 let client=null;
-let maxHP=1000,currentHP=1000;
+let maxHP=500,currentHP=500;
 const damage=25,heal=25;
 const whitelist=["acek47shawty","shadowcast_dj"];
 const cooldowns={};
-let resetTimeout=null;
 
+const hpWrapper=document.getElementById("hp-wrapper");
+const gameOver=document.getElementById("gameOver");
 const hpBar=document.getElementById("hp-bar");
 const hpBarGrey=document.getElementById("hp-bar-grey");
 const hpText=document.getElementById("hp-text");
 const eventLog=document.getElementById("event-log");
-const hpWrapper=document.getElementById("hp-wrapper");
 const statusBadge=document.getElementById("status");
 const capsuleStatus=document.getElementById("capsuleStatus");
 const usernameLabel=document.getElementById("username");
-const gameOver=document.getElementById("gameOver");
 
 function updateHP(mode="hit"){
   const percent=(currentHP/maxHP)*100;
@@ -133,20 +144,33 @@ function updateHP(mode="hit"){
     hpBarGrey.style.width=percent+"%";
     hpBarGrey.classList.remove("fade"); void hpBarGrey.offsetWidth;
     hpBarGrey.classList.add("fade");
-    setTimeout(()=>hpBarGrey.classList.remove("fade"),1000);
-  }
-  if(mode==="heal"||mode==="reset"){
+    setTimeout(()=>hpBarGrey.classList.remove("fade"),500);
+  } else {
     hpBarGrey.style.width=percent+"%";
-    hpBarGrey.classList.remove("fade");
   }
 }
 function showEvent(msg,type){
-  if(resetTimeout) clearTimeout(resetTimeout);
-  eventLog.textContent=msg;
-  if(type) eventLog.className=type;
+  eventLog.textContent = msg;
+  eventLog.classList.remove("flash-hit","flash-heal","flash-reset");
+
+  if(type === "hit") eventLog.classList.add("flash-hit");
+  if(type === "heal") eventLog.classList.add("flash-heal");
+  if(type === "reset") eventLog.classList.add("flash-reset");
+
+  setTimeout(() => {
+    eventLog.classList.remove("flash-hit","flash-heal","flash-reset");
+    eventLog.style.color = "#ffffff";
+  }, 400);
 }
 function shakeWrapper(){hpWrapper.classList.add("shake");setTimeout(()=>hpWrapper.classList.remove("shake"),600);}
-function flashHPBar(){hpBar.classList.add("flash");setTimeout(()=>hpBar.classList.remove("flash"),200);}
+function flashHPBar(){
+  hpBar.classList.add("flash");
+  hpBarGrey.classList.add("flash");
+  setTimeout(() => {
+    hpBar.classList.remove("flash");
+    hpBarGrey.classList.remove("flash");
+  }, 200);
+}
 function isOnCooldown(user,cmd){const now=Date.now(),key=user+"_"+cmd;if(cooldowns[key]&&now-cooldowns[key]<2000)return true;cooldowns[key]=now;return false;}
 
 document.getElementById("connectBtn").addEventListener("click",()=>{
@@ -173,10 +197,240 @@ function connectTwitch(channel){
     if(self) return;
     handleCommand(tags,msg.trim());
   });
-  client.on("disconnected",()=>{
+}
+
+function handleCommand(tags,msg){
+  const user=(tags.username||"").toLowerCase();
+  if(msg==="hit"&&!isOnCooldown(user,"hit")){
+    currentHP=Math.max(0,currentHP-damage);
+    updateHP("hit"); showEvent(`${usernameLabel.textContent} got hit!`,"hit"); 
+    shakeWrapper(); flashHPBar();
+
+    if(currentHP===0){
+      hpBar.classList.add("ko");
+      setTimeout(()=>{
+        hpBar.classList.remove("ko");
+        hpWrapper.classList.remove("show");
+        gameOver.classList.add("show");
+      },1200);
+    }
+  }
+  const isAllowed=tags.mod||tags.badges?.broadcaster||whitelist.includes(user);
+  if(isAllowed){
+    if(msg==="heal"&&!isOnCooldown(user,"heal") && currentHP>0){
+      currentHP=Math.min(maxHP,currentHP+heal);
+      updateHP("heal"); showEvent(`${usernameLabel.textContent} got healed!`,"heal");
+    }
+    if(msg==="reset"&&!isOnCooldown(user,"reset")){
+      currentHP=maxHP;
+      updateHP("reset"); showEvent(`${usernameLabel.textContent} HP reset!`,"reset");
+      gameOver.classList.remove("show");
+      hpWrapper.classList.add("show");
+    }
+  }
+}
+updateHP("reset");
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HP Bar Overlay</title>
+  <script src="https://cdn.jsdelivr.net/npm/tmi.js/dist/tmi.min.js"></script>
+  <style>
+    :root{
+      --hp-fill:#89F336;       /* lime green */
+      --hp-damage:#89F336;     /* also lime green for overlay */
+      --event-bg:#B3FBF2;      /* aqua event panel */
+      --text:#ffffff;          /* white text */
+      --hp-bg:#89F336;         /* lime green HP background */
+      --profile-bg:#ff69b4;    /* pink profile circle */
+    }
+    body{margin:0;background:transparent;font-family:Arial,Helvetica,sans-serif;}
+
+    .topbar{position:fixed;top:8px;left:8px;display:flex;gap:8px;align-items:center;z-index:50;background:rgba(255,255,255,.9);padding:6px 10px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.25);}
+    .topbar input{width:220px;padding:8px 10px;border-radius:8px;border:1px solid #ccc;}
+    .topbar button{padding:8px 12px;border:none;border-radius:8px;background:#222;color:#fff;font-weight:bold;cursor:pointer;}
+    .badge{font-size:12px;padding:6px 10px;border-radius:999px;background:#eee;}
+
+    .stage{min-height:120px;display:flex;align-items:center;justify-content:center;padding-top:64px;position:relative;}
+
+    /* Shared fade logic */
+    .fade-container {
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .7s ease;
+      position:absolute;
+      top:0; left:50%; transform:translateX(-50%);
+      width:100%;
+      display:flex; justify-content:center; align-items:center;
+    }
+    .fade-container.show {
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .hp-wrapper{flex-direction:column;align-items:center;}
+    .hp-event-wrapper{width:420px;border:2px solid #000;border-radius:30px;overflow:hidden;box-shadow:0 6px 16px rgba(0,0,0,.3);}
+
+    .hp-panel{width:100%;height:55px;background:var(--hp-bg);padding-left:80px;position:relative;}
+    .hp-container{position:relative;width:100%;height:100%;border-radius:28px;overflow:hidden;}
+    .hp-bar-grey,.hp-bar{position:absolute;left:0;top:0;bottom:0;border-radius:28px;transition:background 0.3s ease;}
+    .hp-bar-grey{background:var(--hp-damage);width:100%;opacity:1;transition:width 1s ease,opacity 1s ease,background 0.3s ease;}
+    .hp-bar-grey.fade{opacity:0;}
+    .hp-bar{background:var(--hp-fill);width:100%;transition:width .3s ease,background 0.3s ease;position:relative;overflow:hidden;}
+    .hp-bar::before{content:"";position:absolute;inset:0;border-radius:28px;background:linear-gradient(to bottom,rgba(255,255,255,.35) 0%,rgba(255,255,255,.08) 40%,rgba(255,255,255,0) 100%);}
+    .hp-bar.flash,.hp-bar-grey.flash{background:#ff4d4d;} /* flash red */
+    .hp-bar.ko { animation: koFlash 1.2s ease; }
+    .hp-text{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:15px;font-weight:bold;color:var(--text);}
+
+    .profile{position:absolute;left:-10px;top:-10px;width:70px;height:70px;border-radius:50%;border:3px solid #fff;overflow:hidden;background:var(--profile-bg);box-shadow:0 4px 10px rgba(0,0,0,.4);}
+    .profile img{width:100%;height:100%;object-fit:contain;}
+    .username{position:absolute;top:60px;left:50%;transform:translateX(-50%);font-size:14px;font-weight:bold;color:#ffffff;} /* always white */
+    .capsule-status{position:absolute;top:78px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:bold;opacity:.85;}
+    .capsule-status.connected{color:#00aa00;}
+    .capsule-status.disconnected{color:#aa0000;}
+
+    .event-panel{width:100%;height:42px;background:var(--event-bg);border-radius:0 0 30px 30px;position:relative;overflow:hidden;}
+    .event-panel::before{content:"";position:absolute;inset:0;border-radius:0 0 30px 30px;background:linear-gradient(to bottom,rgba(255,255,255,.25) 0%,rgba(255,255,255,.08) 40%,rgba(255,255,255,0) 100%);}
+    #event-log{
+      width:100%;text-align:center;font-size:17px;font-weight:bold;line-height:42px;
+      color:#ffffff; /* default white */
+      transition: color 0.4s ease;
+      position:relative;z-index:1;
+    }
+    /* Flash states */
+    #event-log.flash-hit { color:#ff4d4d; }
+    #event-log.flash-heal { color:#39ff14; }
+    #event-log.flash-reset { color:#0066cc; }
+
+    .shake{animation:shakeAnim .6s;}
+    @keyframes shakeAnim{0%,100%{transform:translate(0,0);}15%{transform:translate(-5px,-5px);}30%{transform:translate(5px,-3px);}45%{transform:translate(-4px,4px);}60%{transform:translate(4px,3px);}75%{transform:translate(-3px,-4px);}}
+
+    @keyframes koFlash {
+      0%, 50%, 100% { background:#ff0000; }
+      25%, 75% { background:#660000; }
+    }
+
+    /* Game Over screen */
+    .gameover-screen {flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+    .gameover-text {font-size:60px;font-weight:bold;color:#ff3333;text-shadow:0 0 20px #ff0000,0 0 40px #ff0000;}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <input id="channelInput" type="text" placeholder="Twitch channel (e.g. ryaah)">
+    <button id="connectBtn">Connect</button>
+    <span class="badge" id="status">Not connected</span>
+  </div>
+
+  <div class="stage">
+    <!-- HP UI -->
+    <div id="hp-wrapper" class="fade-container show">
+      <div class="hp-wrapper">
+        <div class="hp-event-wrapper">
+          <div class="hp-panel">
+            <div class="hp-container">
+              <div id="hp-bar-grey" class="hp-bar-grey"></div>
+              <div id="hp-bar" class="hp-bar"></div>
+              <div id="hp-text" class="hp-text">HP: 500/500</div>
+            </div>
+            <div class="profile">
+              <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png">
+            </div>
+            <div id="username" class="username">ryaah</div>
+            <div id="capsuleStatus" class="capsule-status disconnected">Disconnected</div>
+          </div>
+          <div class="event-panel"><div id="event-log">ryaah</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOver" class="fade-container gameover-screen">
+      <div class="gameover-text">GAME OVER</div>
+    </div>
+  </div>
+
+<script>
+let client=null;
+let maxHP=500,currentHP=500;
+const damage=25,heal=25;
+const whitelist=["acek47shawty","shadowcast_dj"];
+const cooldowns={};
+
+const hpWrapper=document.getElementById("hp-wrapper");
+const gameOver=document.getElementById("gameOver");
+const hpBar=document.getElementById("hp-bar");
+const hpBarGrey=document.getElementById("hp-bar-grey");
+const hpText=document.getElementById("hp-text");
+const eventLog=document.getElementById("event-log");
+const statusBadge=document.getElementById("status");
+const capsuleStatus=document.getElementById("capsuleStatus");
+const usernameLabel=document.getElementById("username");
+
+function updateHP(mode="hit"){
+  const percent=(currentHP/maxHP)*100;
+  hpBar.style.width=percent+"%";
+  hpText.textContent=`HP: ${currentHP}/${maxHP}`;
+  if(mode==="hit"){
+    hpBarGrey.style.width=percent+"%";
+    hpBarGrey.classList.remove("fade"); void hpBarGrey.offsetWidth;
+    hpBarGrey.classList.add("fade");
+    setTimeout(()=>hpBarGrey.classList.remove("fade"),500);
+  } else {
+    hpBarGrey.style.width=percent+"%";
+  }
+}
+function showEvent(msg,type){
+  eventLog.textContent = msg;
+  eventLog.classList.remove("flash-hit","flash-heal","flash-reset");
+
+  if(type === "hit") eventLog.classList.add("flash-hit");
+  if(type === "heal") eventLog.classList.add("flash-heal");
+  if(type === "reset") eventLog.classList.add("flash-reset");
+
+  setTimeout(() => {
+    eventLog.classList.remove("flash-hit","flash-heal","flash-reset");
+    eventLog.style.color = "#ffffff";
+  }, 400);
+}
+function shakeWrapper(){hpWrapper.classList.add("shake");setTimeout(()=>hpWrapper.classList.remove("shake"),600);}
+function flashHPBar(){
+  hpBar.classList.add("flash");
+  hpBarGrey.classList.add("flash");
+  setTimeout(() => {
+    hpBar.classList.remove("flash");
+    hpBarGrey.classList.remove("flash");
+  }, 200);
+}
+function isOnCooldown(user,cmd){const now=Date.now(),key=user+"_"+cmd;if(cooldowns[key]&&now-cooldowns[key]<2000)return true;cooldowns[key]=now;return false;}
+
+document.getElementById("connectBtn").addEventListener("click",()=>{
+  const ch=document.getElementById("channelInput").value.trim().toLowerCase();
+  if(ch) connectTwitch(ch);
+});
+function connectTwitch(channel){
+  statusBadge.textContent="Connecting…";
+  capsuleStatus.textContent="Connecting…"; capsuleStatus.className="capsule-status";
+  usernameLabel.textContent=channel;
+  eventLog.textContent=channel;
+  try{if(client)client.disconnect();}catch(_){}
+  client=new tmi.Client({connection:{secure:true,reconnect:true},channels:[channel]});
+  client.connect().then(()=>{
+    statusBadge.textContent=`Connected: ${channel}`;
+    capsuleStatus.textContent=`Connected: ${channel}`;
+    capsuleStatus.className="capsule-status connected";
+  }).catch(()=>{
     statusBadge.textContent="Not connected";
     capsuleStatus.textContent="Disconnected";
     capsuleStatus.className="capsule-status disconnected";
+  });
+  client.on("message",(chan,tags,msg,self)=>{
+    if(self) return;
+    handleCommand(tags,msg.trim());
   });
 }
 
@@ -191,8 +445,8 @@ function handleCommand(tags,msg){
       hpBar.classList.add("ko");
       setTimeout(()=>{
         hpBar.classList.remove("ko");
-        hpWrapper.classList.add("hidden");   // hide HP UI
-        gameOver.style.display="flex";       // show Game Over screen
+        hpWrapper.classList.remove("show");
+        gameOver.classList.add("show");
       },1200);
     }
   }
@@ -205,8 +459,8 @@ function handleCommand(tags,msg){
     if(msg==="reset"&&!isOnCooldown(user,"reset")){
       currentHP=maxHP;
       updateHP("reset"); showEvent(`${usernameLabel.textContent} HP reset!`,"reset");
-      hpWrapper.classList.remove("hidden"); // bring back HP UI
-      gameOver.style.display="none";        // hide Game Over screen
+      gameOver.classList.remove("show");
+      hpWrapper.classList.add("show");
     }
   }
 }
