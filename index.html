@@ -11,33 +11,35 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 15px;
+      gap: 5px;
     }
 
-    /* Wrapper so both panels can shake together */
     .hp-wrapper {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 15px;
+      gap: 0;
       position: relative;
     }
 
-    /* Shared pink container style */
+    /* Shared base panel */
     .panel {
       position: relative;
-      width: 400px;
-      height: 50px;
-      background: #f8aee3;
-      border-radius: 25px;
       overflow: hidden;
       display: flex;
       align-items: center;
-      padding-left: 60px;
       justify-content: center;
     }
 
-    /* HP fill bar */
+    /* Top HP bar container */
+    .hp-panel {
+      width: 400px;
+      height: 50px;
+      border-radius: 25px 25px 0 0;
+      background: #1d3d1d; /* dark green */
+      padding-left: 60px;
+    }
+
     .hp-bar {
       height: 100%;
       background: linear-gradient(90deg, #7CFC00, #32CD32);
@@ -54,22 +56,16 @@
     .hp-bar::after {
       content: "";
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       border-radius: 25px;
       background: rgba(255, 0, 0, 0.5);
       opacity: 0;
       transition: opacity 0.2s;
       pointer-events: none;
     }
+    .hp-bar.flash::after { opacity: 1; }
 
-    .hp-bar.flash::after {
-      opacity: 1;
-    }
-
-    /* HP text */
     .hp-text {
       position: absolute;
       left: 50%;
@@ -92,14 +88,12 @@
       overflow: hidden;
       background: #000;
     }
-
     .profile img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
 
-    /* Username under bar */
     .username {
       position: absolute;
       top: 55px;
@@ -111,7 +105,14 @@
       text-shadow: 1px 1px 2px black;
     }
 
-    /* Event log panel */
+    /* Bottom Event panel */
+    .event-panel {
+      width: 340px;
+      height: 40px;
+      border-radius: 0 0 20px 20px;
+      background: #f8aee3; /* pink */
+    }
+
     #event-log {
       width: 100%;
       text-align: center;
@@ -121,22 +122,20 @@
       opacity: 1;
       transition: opacity 0.5s ease-in-out, color 0.3s ease-in-out;
       color: #fff;
+      line-height: 40px;
     }
 
-    .hidden {
-      opacity: 0;
-    }
+    .hidden { opacity: 0; }
 
     /* Event colors */
     .hit { color: #ff4d4d; }
     .heal { color: #39ff14; }
     .reset { color: #66a3ff; }
 
-    /* Shake animation (multi-directional) */
+    /* Shake animation */
     .shake {
       animation: shakeAnim 0.6s;
     }
-
     @keyframes shakeAnim {
       0%   { transform: translate(0, 0); }
       15%  { transform: translate(-5px, -5px); }
@@ -150,8 +149,8 @@
 </head>
 <body>
   <div class="hp-wrapper" id="hp-wrapper">
-    <!-- HP Panel -->
-    <div class="panel">
+    <!-- Top HP Panel -->
+    <div class="panel hp-panel">
       <div id="hp-bar" class="hp-bar"></div>
       <div id="hp-text" class="hp-text">HP: 1000/1000</div>
       <div class="profile">
@@ -160,22 +159,20 @@
       <div class="username">ryaah</div>
     </div>
 
-    <!-- Event Log Panel -->
-    <div class="panel">
+    <!-- Bottom Event Panel -->
+    <div class="panel event-panel">
       <div id="event-log">ryaah</div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5"></script>
   <script>
-    // Settings
     let maxHP = 1000;
     let currentHP = 1000;
     const damage = 25;
     const healAmount = 25;
     const defaultName = "ryaah";
 
-    // ✅ Whitelist
     const whitelist = ["acek47shawty", "shadowcast_dj"];
 
     const hpBar = document.getElementById("hp-bar");
@@ -224,35 +221,32 @@
       setTimeout(() => hpBar.classList.remove("flash"), 200);
     }
 
-    // Twitch chat connection
-    const client = new tmi.Client({
-      channels: ["ryaah"]
-    });
-
+    const client = new tmi.Client({ channels: ["ryaah"] });
     client.connect();
 
     client.on("message", (channel, tags, message, self) => {
       if (self) return;
       const cmd = message.trim().toLowerCase();
-      const user = tags.username.toLowerCase();
 
-      if (cmd === "!hit") {
+      // ✅ Only allow exact single-word commands
+      if (cmd === "hit") {
         currentHP = Math.max(0, currentHP - damage);
         updateHP();
         showEvent("ryaah got hit!", "hit");
-        shakeWrapper();   // ✅ shake
-        flashHPBar();     // ✅ red flash
+        shakeWrapper();
+        flashHPBar();
       }
 
+      const user = tags.username.toLowerCase();
       const isAllowed = tags.mod || tags.badges?.broadcaster || whitelist.includes(user);
 
       if (isAllowed) {
-        if (cmd === "!heal") {
+        if (cmd === "heal") {
           currentHP = Math.min(maxHP, currentHP + healAmount);
           updateHP();
           showEvent("ryaah got healed!", "heal");
         }
-        if (cmd === "!reset") {
+        if (cmd === "reset") {
           currentHP = maxHP;
           updateHP();
           showEvent("ryaah HP reset!", "reset");
