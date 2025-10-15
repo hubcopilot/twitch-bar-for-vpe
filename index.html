@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HP Bar</title>
+  <style>
+    body {
+      margin: 0;
+      background: transparent;
+      font-family: Arial, sans-serif;
+    }
+
+    .hp-container {
+      position: relative;
+      width: 400px;
+      height: 50px;
+      background: #f8aee3; /* pink background */
+      border-radius: 25px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      padding: 5px;
+    }
+
+    .hp-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #5dff5d, #2bbf2b);
+      border-radius: 25px;
+      text-align: center;
+      line-height: 40px;
+      font-weight: bold;
+      color: white;
+      transition: width 0.3s;
+    }
+
+    .hp-text {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .profile {
+      position: absolute;
+      right: -30px;
+      top: -5px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 3px solid white;
+      overflow: hidden;
+    }
+
+    .profile img {
+      width: 100%;
+      height: 100%;
+    }
+
+    .username {
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      color: #fff;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px black;
+    }
+
+    /* Game Over Overlay */
+    #game-over {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 40px;
+      font-weight: bold;
+      color: red;
+      text-shadow: 2px 2px 5px black;
+      display: none;
+      animation: flash 0.5s infinite alternate;
+    }
+
+    @keyframes flash {
+      from { opacity: 1; }
+      to { opacity: 0.2; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hp-container">
+    <div id="hp-bar" class="hp-bar"></div>
+    <div id="hp-text" class="hp-text">HP: 1000/1000</div>
+    <div class="profile">
+      <img src="https://via.placeholder.com/60" alt="profile">
+    </div>
+    <div class="username">ryaah</div>
+  </div>
+
+  <div id="game-over">GAME OVER</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5"></script>
+  <script>
+    // Settings
+    let maxHP = 1000;
+    let currentHP = 1000;
+    const damage = 25;     // "!hit"
+    const healAmount = 25; // "!heal"
+
+    // ✅ Whitelist (trusted mods or users, lowercase only)
+    const whitelist = ["acek47shawty", "shadowcast_dj"];
+
+    const hpBar = document.getElementById("hp-bar");
+    const hpText = document.getElementById("hp-text");
+    const gameOver = document.getElementById("game-over");
+
+    function updateHP() {
+      const percent = (currentHP / maxHP) * 100;
+      hpBar.style.width = percent + "%";
+      hpText.textContent = `HP: ${currentHP}/${maxHP}`;
+
+      if (currentHP <= 0) {
+        currentHP = 0;
+        hpBar.style.width = "0%";
+        gameOver.style.display = "block"; // show GAME OVER
+      } else {
+        gameOver.style.display = "none"; // hide if healed
+      }
+    }
+
+    // Twitch chat connection
+    const client = new tmi.Client({
+      channels: ["ryaah"]
+    });
+
+    client.connect();
+
+    client.on("message", (channel, tags, message, self) => {
+      if (self) return;
+      const cmd = message.trim().toLowerCase();
+      const user = tags.username.toLowerCase();
+
+      if (cmd === "!hit") {
+        currentHP = Math.max(0, currentHP - damage);
+        updateHP();
+      }
+
+      // Allowed if broadcaster, mod, or in whitelist
+      const isAllowed = tags.mod || tags.badges?.broadcaster || whitelist.includes(user);
+
+      if (isAllowed) {
+        if (cmd === "!heal") {
+          currentHP = Math.min(maxHP, currentHP + healAmount);
+          updateHP();
+        }
+        if (cmd === "!reset") {
+          currentHP = maxHP;
+          updateHP();
+        }
+      }
+    });
+
+    // Initialize
+    updateHP();
+  </script>
+</body>
+</html>
