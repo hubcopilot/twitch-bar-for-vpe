@@ -8,11 +8,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700&display=swap" rel="stylesheet">
   <style>
     :root{
-      --hp-fill:#89F336;       /* lime green */
-      --hp-damage:#89F336;     /* lime green overlay */
+      --hp-fill:#ff69b4;       /* pink */
+      --hp-damage:#ff69b4;     /* pink overlay */
       --event-bg:#B3FBF2;      /* aqua */
       --text:#ffffff;          /* white */
-      --hp-bg:#89F336;         /* lime green HP background */
+      --hp-bg:#ff69b4;         /* pink HP background */
       --profile-bg:#ff69b4;    /* pink profile circle */
     }
     body{margin:0;background:transparent;font-family:'Nunito',sans-serif;}
@@ -43,12 +43,12 @@
 
     .hp-panel{width:100%;height:55px;background:var(--hp-bg);padding-left:80px;position:relative;}
     .hp-container{position:relative;width:100%;height:100%;border-radius:28px;overflow:hidden;}
-    .hp-bar-grey,.hp-bar{position:absolute;left:0;top:0;bottom:0;border-radius:28px;transition:background 0.3s ease;}
-    .hp-bar-grey{background:var(--hp-damage);width:100%;opacity:1;transition:width 1s ease,opacity 1s ease,background 0.3s ease;}
+    .hp-bar-grey,.hp-bar{position:absolute;left:0;top:0;bottom:0;border-radius:28px;}
+    .hp-bar-grey{background:var(--hp-damage);width:100%;opacity:1;transition:width 1s ease,opacity 1s ease;}
     .hp-bar-grey.fade{opacity:0;}
-    .hp-bar{background:var(--hp-fill);width:100%;transition:width .3s ease,background 0.3s ease;position:relative;overflow:hidden;}
+    .hp-bar{background:var(--hp-fill);width:100%;transition:width .3s ease;position:relative;overflow:hidden;}
     .hp-bar::before{content:"";position:absolute;inset:0;border-radius:28px;background:linear-gradient(to bottom,rgba(255,255,255,.35) 0%,rgba(255,255,255,.08) 40%,rgba(255,255,255,0) 100%);}
-    .hp-bar.flash,.hp-bar-grey.flash{background:#ff4d4d;} 
+    .hp-bar.flash,.hp-bar-grey.flash{background:#ff4d4d;} /* stays red */
     .hp-bar.ko { animation: koFlash 1.2s ease; }
     .hp-text{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:15px;font-weight:700;color:var(--text);font-family:'Nunito',sans-serif;}
 
@@ -108,7 +108,7 @@
             <div class="hp-container">
               <div id="hp-bar-grey" class="hp-bar-grey"></div>
               <div id="hp-bar" class="hp-bar"></div>
-              <div id="hp-text" class="hp-text">HP: 500/500</div>
+              <div id="hp-text" class="hp-text">HP: 1000/1000</div>
             </div>
             <div class="profile">
               <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png">
@@ -129,7 +129,7 @@
 
 <script>
 let client=null;
-let maxHP=500,currentHP=500;
+let maxHP=1000,currentHP=1000;
 const damage=25,heal=25;
 const whitelist=["acek47shawty","shadowcast_dj"];
 const cooldowns={};
@@ -152,9 +152,10 @@ function updateHP(mode="hit"){
     hpBarGrey.style.width=percent+"%";
     hpBarGrey.classList.remove("fade"); void hpBarGrey.offsetWidth;
     hpBarGrey.classList.add("fade");
-    setTimeout(()=>hpBarGrey.classList.remove("fade"),500);
   } else {
     hpBarGrey.style.width=percent+"%";
+    hpBar.classList.remove("flash"); 
+    hpBarGrey.classList.remove("flash");
   }
 }
 function showEvent(msg,type){
@@ -172,8 +173,9 @@ function flashHPBar(){
   hpBar.classList.add("flash","shake");
   hpBarGrey.classList.add("flash","shake");
   setTimeout(() => {
-    hpBar.classList.remove("flash","shake");
-    hpBarGrey.classList.remove("flash","shake");
+    hpBar.classList.remove("shake");
+    hpBarGrey.classList.remove("shake");
+    // flash (red) stays active until heal/reset
   }, 600);
 }
 function isOnCooldown(user,cmd){const now=Date.now(),key=user+"_"+cmd;if(cooldowns[key]&&now-cooldowns[key]<2000)return true;cooldowns[key]=now;return false;}
