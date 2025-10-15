@@ -10,11 +10,12 @@
       font-family: Arial, sans-serif;
     }
 
+    /* HP container background */
     .hp-container {
       position: relative;
       width: 400px;
       height: 50px;
-      background: #f8aee3; /* pink background */
+      background: #333; /* darker background so bar stands out */
       border-radius: 25px;
       overflow: hidden;
       display: flex;
@@ -22,15 +23,15 @@
       padding: 5px;
     }
 
+    /* HP bar itself */
     .hp-bar {
       height: 100%;
-      background: linear-gradient(90deg, #5dff5d, #2bbf2b);
       border-radius: 25px;
       text-align: center;
       line-height: 40px;
       font-weight: bold;
       color: white;
-      transition: width 0.3s;
+      transition: width 0.3s, background 0.3s;
     }
 
     .hp-text {
@@ -42,6 +43,7 @@
       color: #fff;
     }
 
+    /* Profile circle */
     .profile {
       position: absolute;
       right: -30px;
@@ -51,11 +53,17 @@
       border-radius: 50%;
       border: 3px solid white;
       overflow: hidden;
+      transition: box-shadow 0.3s ease-in-out;
     }
 
     .profile img {
       width: 100%;
       height: 100%;
+    }
+
+    /* Glow pulse on HP change */
+    .profile.glow {
+      box-shadow: 0 0 15px #ff69b4, 0 0 25px #39ff14;
     }
 
     .username {
@@ -75,17 +83,18 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 40px;
+      font-size: 50px;
       font-weight: bold;
       color: red;
-      text-shadow: 2px 2px 5px black;
+      text-shadow: 2px 2px 8px black;
       display: none;
-      animation: flash 0.5s infinite alternate;
+      animation: fadePulse 2s infinite ease-in-out;
     }
 
-    @keyframes flash {
-      from { opacity: 1; }
-      to { opacity: 0.2; }
+    @keyframes fadePulse {
+      0%   { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+      50%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
     }
   </style>
 </head>
@@ -94,7 +103,7 @@
     <div id="hp-bar" class="hp-bar"></div>
     <div id="hp-text" class="hp-text">HP: 1000/1000</div>
     <div class="profile">
-      <img src="https://via.placeholder.com/60" alt="profile">
+      <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png" alt="profile">
     </div>
     <div class="username">ryaah</div>
   </div>
@@ -121,13 +130,28 @@
       hpBar.style.width = percent + "%";
       hpText.textContent = `HP: ${currentHP}/${maxHP}`;
 
+      // Change bar color based on HP %
+      if (percent > 60) {
+        hpBar.style.background = "linear-gradient(90deg, #28ff28, #00b300)"; // green
+      } else if (percent > 30) {
+        hpBar.style.background = "linear-gradient(90deg, #ffff66, #ffcc00)"; // yellow
+      } else {
+        hpBar.style.background = "linear-gradient(90deg, #ff4d4d, #b30000)"; // red
+      }
+
+      // Show/hide GAME OVER
       if (currentHP <= 0) {
         currentHP = 0;
         hpBar.style.width = "0%";
-        gameOver.style.display = "block"; // show GAME OVER
+        gameOver.style.display = "block"; 
       } else {
-        gameOver.style.display = "none"; // hide if healed
+        gameOver.style.display = "none"; 
       }
+
+      // Glow effect on profile
+      const profile = document.querySelector(".profile");
+      profile.classList.add("glow");
+      setTimeout(() => profile.classList.remove("glow"), 500);
     }
 
     // Twitch chat connection
