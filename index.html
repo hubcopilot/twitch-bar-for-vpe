@@ -7,9 +7,9 @@
   <style>
     :root{
       --hp-fill:#89F336;       /* lime green */
-      --hp-damage:#89F336;     /* also lime green for overlay */
-      --event-bg:#B3FBF2;      /* aqua event panel */
-      --text:#ffffff;          /* white text */
+      --hp-damage:#89F336;     /* lime green overlay */
+      --event-bg:#B3FBF2;      /* aqua */
+      --text:#ffffff;          /* white */
       --hp-bg:#89F336;         /* lime green HP background */
       --profile-bg:#ff69b4;    /* pink profile circle */
     }
@@ -22,7 +22,7 @@
 
     .stage{min-height:120px;display:flex;align-items:center;justify-content:center;padding-top:64px;position:relative;}
 
-    /* Shared fade logic */
+    /* Fade logic */
     .fade-container {
       opacity:0;
       pointer-events:none;
@@ -51,6 +51,20 @@
     .hp-bar.ko { animation: koFlash 1.2s ease; }
     .hp-text{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:15px;font-weight:bold;color:var(--text);}
 
+    /* Shake only bars, not the wrapper */
+    .hp-bar.shake,
+    .hp-bar-grey.shake {
+      animation: barShake 0.6s;
+    }
+    @keyframes barShake {
+      0%,100% { transform: translateX(0); }
+      15% { transform: translateX(-3px); }
+      30% { transform: translateX(3px); }
+      45% { transform: translateX(-2px); }
+      60% { transform: translateX(2px); }
+      75% { transform: translateX(-1px); }
+    }
+
     .profile{position:absolute;left:-10px;top:-10px;width:70px;height:70px;border-radius:50%;border:3px solid #fff;overflow:hidden;background:var(--profile-bg);box-shadow:0 4px 10px rgba(0,0,0,.4);}
     .profile img{width:100%;height:100%;object-fit:contain;}
     .username{position:absolute;top:60px;left:50%;transform:translateX(-50%);font-size:14px;font-weight:bold;color:#ffffff;} /* always white */
@@ -70,9 +84,6 @@
     #event-log.flash-hit { color:#ff4d4d; }
     #event-log.flash-heal { color:#39ff14; }
     #event-log.flash-reset { color:#0066cc; }
-
-    .shake{animation:shakeAnim .6s;}
-    @keyframes shakeAnim{0%,100%{transform:translate(0,0);}15%{transform:translate(-5px,-5px);}30%{transform:translate(5px,-3px);}45%{transform:translate(-4px,4px);}60%{transform:translate(4px,3px);}75%{transform:translate(-3px,-4px);}}
 
     @keyframes koFlash {
       0%, 50%, 100% { background:#ff0000; }
@@ -100,7 +111,7 @@
             <div class="hp-container">
               <div id="hp-bar-grey" class="hp-bar-grey"></div>
               <div id="hp-bar" class="hp-bar"></div>
-              <div id="hp-text" class="hp-text">HP: 500/500</div>
+              <div id="hp-text" class="hp-text">HP: 200/200</div>
             </div>
             <div class="profile">
               <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png">
@@ -121,7 +132,7 @@
 
 <script>
 let client=null;
-let maxHP=500,currentHP=500;
+let maxHP=200,currentHP=200;
 const damage=25,heal=25;
 const whitelist=["acek47shawty","shadowcast_dj"];
 const cooldowns={};
@@ -144,7 +155,7 @@ function updateHP(mode="hit"){
     hpBarGrey.style.width=percent+"%";
     hpBarGrey.classList.remove("fade"); void hpBarGrey.offsetWidth;
     hpBarGrey.classList.add("fade");
-    setTimeout(()=>hpBarGrey.classList.remove("fade"),500);
+    setTimeout(()=>hpBarGrey.classList.remove("fade"),200);
   } else {
     hpBarGrey.style.width=percent+"%";
   }
@@ -152,24 +163,21 @@ function updateHP(mode="hit"){
 function showEvent(msg,type){
   eventLog.textContent = msg;
   eventLog.classList.remove("flash-hit","flash-heal","flash-reset");
-
   if(type === "hit") eventLog.classList.add("flash-hit");
   if(type === "heal") eventLog.classList.add("flash-heal");
   if(type === "reset") eventLog.classList.add("flash-reset");
-
   setTimeout(() => {
     eventLog.classList.remove("flash-hit","flash-heal","flash-reset");
     eventLog.style.color = "#ffffff";
   }, 400);
 }
-function shakeWrapper(){hpWrapper.classList.add("shake");setTimeout(()=>hpWrapper.classList.remove("shake"),600);}
 function flashHPBar(){
-  hpBar.classList.add("flash");
-  hpBarGrey.classList.add("flash");
+  hpBar.classList.add("flash","shake");
+  hpBarGrey.classList.add("flash","shake");
   setTimeout(() => {
-    hpBar.classList.remove("flash");
-    hpBarGrey.classList.remove("flash");
-  }, 200);
+    hpBar.classList.remove("flash","shake");
+    hpBarGrey.classList.remove("flash","shake");
+  }, 600);
 }
 function isOnCooldown(user,cmd){const now=Date.now(),key=user+"_"+cmd;if(cooldowns[key]&&now-cooldowns[key]<2000)return true;cooldowns[key]=now;return false;}
 
@@ -204,8 +212,7 @@ function handleCommand(tags,msg){
   if(msg==="hit"&&!isOnCooldown(user,"hit")){
     currentHP=Math.max(0,currentHP-damage);
     updateHP("hit"); showEvent(`${usernameLabel.textContent} got hit!`,"hit"); 
-    shakeWrapper(); flashHPBar();
-
+    flashHPBar();
     if(currentHP===0){
       hpBar.classList.add("ko");
       setTimeout(()=>{
