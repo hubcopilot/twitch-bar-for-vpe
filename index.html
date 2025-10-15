@@ -3,397 +3,285 @@
 <head>
   <meta charset="UTF-8" />
   <title>Ryaah HP Bar</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --hp-fill:#89F336;      /* bright green HP fill */
-      --event-bg:#B3FBF2;     /* soft blue event panel */
+      --hp-fill:#89F336;      /* bright green HP */
+      --hp-damage:#777777;    /* grey overlay for lost HP */
+      --event-bg:#B3FBF2;     /* blue event panel */
       --text:#000000;         /* black text */
-      --hp-bg:#1d3d1d;        /* dark green container behind HP fill */
+      --hp-bg:#1d3d1d;
     }
-    html, body {
+    body {
       margin: 0;
       background: transparent;
       font-family: Arial, Helvetica, sans-serif;
     }
 
-    /* Topbar controls (channel connect) */
+    /* Topbar */
     .topbar {
-      position: fixed;
-      top: 8px;
-      left: 8px;
-      display: flex;
-      gap: 8px;
-      align-items: center;
+      position: fixed; top: 8px; left: 8px;
+      display: flex; gap: 8px; align-items: center;
       z-index: 50;
-      background: rgba(255,255,255,0.85);
-      padding: 6px 8px;
-      border-radius: 10px;
-      border: 1px solid rgba(0,0,0,0.15);
-    }
-    .topbar input {
-      width: 220px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-    }
-    .topbar button {
-      padding: 8px 12px;
-      border: none;
-      border-radius: 8px;
-      background: #222;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .badge {
+      background: rgba(255,255,255,0.9);
       padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      border: 1px solid rgba(0,0,0,0.15);
-      background: #f2f2f2;
-      color: #000;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    }
+    .topbar input { width: 220px; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; }
+    .topbar button { padding: 8px 12px; border: none; border-radius: 8px; background: #222; color: #fff; font-weight: bold; }
+    .badge { font-size: 12px; padding: 6px 10px; border-radius: 999px; background: #eee; }
+
+    /* Stage */
+    .stage { min-height: 120px; display: flex; align-items: center; justify-content: center; padding-top: 64px; }
+    .hp-wrapper { display: flex; flex-direction: column; align-items: center; }
+
+    /* Capsule Wrapper (black outline around everything) */
+    .hp-event-wrapper {
+      width: 420px;
+      border: 2px solid #000;       /* black outline */
+      border-radius: 30px;          /* smooth capsule */
+      overflow: hidden;             /* clip children inside */
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
     }
 
-    /* Layout wrapper for the two panels */
-    .stage {
-      min-height: 120px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding-top: 64px; /* room for topbar */
-    }
-    .hp-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0;
+    /* HP Panel */
+    .hp-panel {
+      width: 100%; height: 55px;
+      background: var(--hp-bg);
+      padding-left: 80px;
       position: relative;
+      border-radius: 30px 30px 0 0;
+    }
+    .hp-container {
+      position: relative;
+      width: 100%; height: 100%;
+      border-radius: 28px;
+      overflow: hidden;
     }
 
-    /* Shared panel base */
-    .panel {
+    /* Bars */
+    .hp-bar-grey, .hp-bar {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      border-radius: 28px;
+    }
+    .hp-bar-grey {
+      background: var(--hp-damage);
+      width: 100%;
+      opacity: 1;
+      transition: width 1s ease, opacity 1s ease;
+    }
+    .hp-bar-grey.fade { opacity: 0; }
+
+    .hp-bar {
+      background: var(--hp-fill);
+      width: 100%;
+      transition: width 0.3s ease;
       position: relative;
       overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
-
-    /* Top HP bar container */
-    .hp-panel {
-      width: 420px;
-      height: 55px;
-      border-radius: 28px 28px 0 0;
-      background: var(--hp-bg);
-      padding-left: 80px; /* space for profile circle */
-    }
-
-    /* HP fill bar itself */
-    .hp-bar {
-      height: 100%;
-      background: var(--hp-fill);
-      border-radius: 28px;
-      text-align: center;
-      line-height: 55px;
-      font-weight: bold;
-      color: var(--text);
-      transition: width 0.3s;
-      position: relative;
-      border: 2px solid #000000; /* thin black border */
-      box-sizing: border-box;
-      width: 100%; /* starts full, JS will set correctly */
-    }
-
-    /* Red flash overlay on hit */
-    .hp-bar::after {
+    .hp-bar::before {
       content: "";
       position: absolute;
       inset: 0;
       border-radius: 28px;
-      background: rgba(255, 0, 0, 0.45);
-      opacity: 0;
-      transition: opacity 0.2s;
+      background: linear-gradient(to bottom,
+        rgba(255,255,255,0.35) 0%,
+        rgba(255,255,255,0.08) 40%,
+        rgba(255,255,255,0) 100%);
       pointer-events: none;
     }
-    .hp-bar.flash::after { opacity: 1; }
+    .hp-bar.flash { background: #ff4d4d; }
 
-    /* HP text centered above the bar */
     .hp-text {
       position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 15px;
-      font-weight: bold;
+      left: 50%; top: 50%; transform: translate(-50%,-50%);
+      font-size: 15px; font-weight: bold;
       color: var(--text);
-      user-select: none;
     }
 
-    /* Larger profile circle (show every pixel) */
+    /* Profile */
     .profile {
       position: absolute;
-      left: -10px;
-      top: -10px;
-      width: 70px;
-      height: 70px;
+      left: -10px; top: -10px;
+      width: 70px; height: 70px;
       border-radius: 50%;
       border: 3px solid white;
       overflow: hidden;
       background: #000;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
     }
-    .profile img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain; /* ensures entire image is visible, no cropping */
-      background: #000;    /* fills any letterboxing */
-    }
+    .profile img { width: 100%; height: 100%; object-fit: contain; }
 
-    /* Username under HP bar (black) */
     .username {
-      position: absolute;
-      top: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 14px;
-      font-weight: bold;
-      color: var(--text);
-      user-select: none;
+      position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+      font-size: 14px; font-weight: bold; color: var(--text);
     }
 
-    /* Event panel (shorter width, tucked under) */
+    /* Event Panel */
     .event-panel {
-      width: 370px;     /* ~15% shorter */
-      height: 42px;
-      border-radius: 0 0 24px 24px;
+      width: 100%; height: 42px;
       background: var(--event-bg);
+      border-radius: 0 0 30px 30px;
+      position: relative;
+      overflow: hidden;
+    }
+    .event-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 0 0 30px 30px;
+      background: linear-gradient(to bottom,
+        rgba(255,255,255,0.25) 0%,
+        rgba(255,255,255,0.08) 40%,
+        rgba(255,255,255,0) 100%);
+      pointer-events: none;
     }
     #event-log {
-      width: 100%;
-      text-align: center;
-      font-size: 17px;
-      font-weight: bold;
-      opacity: 1;
-      transition: opacity 0.5s ease-in-out, color 0.3s ease-in-out;
-      color: var(--text); /* default black text */
-      line-height: 42px;
-      user-select: none;
+      width: 100%; text-align: center;
+      font-size: 17px; font-weight: bold; line-height: 42px;
+      color: var(--text);
+      transition: opacity 0.5s ease, color 0.3s ease;
+      position: relative;
+      z-index: 1;
     }
     .hidden { opacity: 0; }
+    .hit { color: #ff4d4d; } .heal { color: #39ff14; } .reset { color: #0066cc; }
 
-    /* Event colors override default when active */
-    .hit  { color: #ff4d4d; }
-    .heal { color: #39ff14; }
-    .reset{ color: #0066cc; }
-
-    /* Shake animation (subtle up/down/left/right) */
+    /* Shake */
     .shake { animation: shakeAnim 0.6s; }
     @keyframes shakeAnim {
-      0%   { transform: translate(0, 0); }
-      15%  { transform: translate(-5px, -5px); }
-      30%  { transform: translate(5px, -3px); }
-      45%  { transform: translate(-4px, 4px); }
-      60%  { transform: translate(4px, 3px); }
-      75%  { transform: translate(-3px, -4px); }
-      100% { transform: translate(0, 0); }
+      0%,100% { transform: translate(0,0); }
+      15% { transform: translate(-5px,-5px); }
+      30% { transform: translate(5px,-3px); }
+      45% { transform: translate(-4px,4px); }
+      60% { transform: translate(4px,3px); }
+      75% { transform: translate(-3px,-4px); }
     }
   </style>
 </head>
 <body>
-  <!-- Channel connect controls -->
   <div class="topbar">
     <input id="channelInput" type="text" placeholder="Twitch channel (e.g. ryaah)" />
     <button id="connectBtn">Connect</button>
     <span class="badge" id="status">Not connected</span>
   </div>
 
-  <!-- Overlay UI -->
   <div class="stage">
     <div class="hp-wrapper" id="hp-wrapper">
-      <!-- HP Panel -->
-      <div class="panel hp-panel">
-        <div id="hp-bar" class="hp-bar"></div>
-        <div id="hp-text" class="hp-text">HP: 1000/1000</div>
-        <div class="profile">
-          <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png" alt="profile" />
+      <!-- Capsule wrapper -->
+      <div class="hp-event-wrapper">
+        <!-- HP Panel -->
+        <div class="hp-panel">
+          <div class="hp-container">
+            <div id="hp-bar-grey" class="hp-bar-grey"></div>
+            <div id="hp-bar" class="hp-bar"></div>
+            <div id="hp-text" class="hp-text">HP: 1000/1000</div>
+          </div>
+          <div class="profile">
+            <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png">
+          </div>
+          <div class="username">ryaah</div>
         </div>
-        <div class="username">ryaah</div>
-      </div>
-
-      <!-- Event Panel -->
-      <div class="panel event-panel">
-        <div id="event-log">ryaah</div>
+        <!-- Event Panel -->
+        <div class="event-panel"><div id="event-log">ryaah</div></div>
       </div>
     </div>
   </div>
 
-  <!-- tmi.js -->
   <script src="https://cdn.jsdelivr.net/npm/tmi.js/dist/tmi.min.js"></script>
   <script>
-    /* ===== UI wiring ===== */
-    const $ = (id) => document.getElementById(id);
-    const channelInput = $("channelInput");
-    const connectBtn   = $("connectBtn");
-    const statusBadge  = $("status");
+    const hpBar = document.getElementById("hp-bar");
+    const hpBarGrey = document.getElementById("hp-bar-grey");
+    const hpText = document.getElementById("hp-text");
+    const eventLog = document.getElementById("event-log");
+    const hpWrapper = document.getElementById("hp-wrapper");
+    const statusBadge = document.getElementById("status");
 
-    /* Prefill channel from URL ?channel=... and auto-connect */
-    (function initFromUrl(){
-      const p = new URLSearchParams(location.search);
-      const ch = (p.get("channel")||"").trim();
-      if (ch) {
-        channelInput.value = ch;
-        connectTwitch(ch);
+    let maxHP=1000, currentHP=1000;
+    const damage=25, heal=25;
+    const whitelist=["acek47shawty","shadowcast_dj"];
+    const cooldowns={};
+    let resetTimeout=null;
+
+    function updateHP(mode="hit") {
+      const percent=(currentHP/maxHP)*100;
+      hpBar.style.width=percent+"%";
+      hpText.textContent=`HP: ${currentHP}/${maxHP}`;
+
+      if(mode==="hit"){
+        // Grey lags, then fades
+        hpBarGrey.style.width = percent+"%";
+        hpBarGrey.classList.remove("fade");
+        void hpBarGrey.offsetWidth; // force reflow
+        hpBarGrey.classList.add("fade");
+        setTimeout(()=>{ hpBarGrey.classList.remove("fade"); },1000);
       }
-    })();
-
-    connectBtn.addEventListener("click", () => {
-      const ch = (channelInput.value || "").trim();
-      if (!ch) {
-        alert("Enter a Twitch channel name");
-        return;
+      if(mode==="heal"||mode==="reset"){
+        hpBarGrey.style.width=percent+"%";
+        hpBarGrey.classList.remove("fade");
       }
-      connectTwitch(ch);
-    });
-
-    channelInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") connectBtn.click();
-    });
-
-    /* ===== HP logic & UI ===== */
-    let maxHP = 1000;
-    let currentHP = 1000;
-    const damage = 25;
-    const healAmount = 25;
-    const defaultName = "ryaah";
-
-    const whitelist = ["acek47shawty", "shadowcast_dj"]; // mods already allowed; streamer via badges.broadcaster
-    const cooldowns = {};
-
-    const hpBar = $("hp-bar");
-    const hpText = $("hp-text");
-    const eventLog = $("event-log");
-    const hpWrapper = $("hp-wrapper");
-
-    let resetTimeout = null;
-
-    function updateHP() {
-      const percent = Math.max(0, Math.min(100, (currentHP / maxHP) * 100));
-      hpBar.style.width = percent + "%";
-      hpText.textContent = `HP: ${currentHP}/${maxHP}`;
     }
 
-    function showEvent(message, typeClass) {
-      if (resetTimeout) clearTimeout(resetTimeout);
+    function showEvent(msg,type) {
+      if(resetTimeout) clearTimeout(resetTimeout);
       eventLog.classList.add("hidden");
-      setTimeout(() => {
-        eventLog.textContent = message;
-        eventLog.className = "";     // clear classes
-        eventLog.id = "event-log";   // keep id
-        if (typeClass) eventLog.classList.add(typeClass);
+      setTimeout(()=>{
+        eventLog.textContent=msg;
+        eventLog.className=""; eventLog.id="event-log";
+        if(type) eventLog.classList.add(type);
         eventLog.classList.remove("hidden");
-      }, 300);
-      resetTimeout = setTimeout(() => {
+      },300);
+      resetTimeout=setTimeout(()=>{
         eventLog.classList.add("hidden");
-        setTimeout(() => {
-          eventLog.textContent = defaultName;
-          eventLog.className = "";
-          eventLog.id = "event-log";
+        setTimeout(()=>{
+          eventLog.textContent="ryaah";
+          eventLog.className=""; eventLog.id="event-log";
           eventLog.classList.remove("hidden");
-        }, 300);
-      }, 5000);
+        },300);
+      },5000);
     }
 
-    function shakeWrapper() {
-      hpWrapper.classList.add("shake");
-      setTimeout(() => hpWrapper.classList.remove("shake"), 600);
-    }
+    function shakeWrapper(){ hpWrapper.classList.add("shake"); setTimeout(()=>hpWrapper.classList.remove("shake"),600);}
+    function flashHPBar(){ hpBar.classList.add("flash"); setTimeout(()=>hpBar.classList.remove("flash"),200); }
+    function isOnCooldown(user,cmd){ const now=Date.now(), key=user+"_"+cmd; if(cooldowns[key]&&now-cooldowns[key]<2000)return true; cooldowns[key]=now; return false;}
 
-    function flashHPBar() {
-      hpBar.classList.add("flash");
-      setTimeout(() => hpBar.classList.remove("flash"), 200);
-    }
+    let client=null;
+    document.getElementById("connectBtn").addEventListener("click",()=>{
+      const ch=document.getElementById("channelInput").value.trim();
+      if(ch) connectTwitch(ch);
+    });
 
-    function isOnCooldown(user, cmd) {
-      const now = Date.now();
-      const key = user + "_" + cmd;
-      if (cooldowns[key] && now - cooldowns[key] < 2000) return true;
-      cooldowns[key] = now;
-      return false;
-    }
-
-    /* ===== Twitch connection like your guess-game ===== */
-    let client = null;
-    function connectTwitch(channel) {
-      const clean = channel.replace(/^#/, ""); // remove leading # if pasted
-      statusBadge.textContent = "Connecting…";
-
-      try { if (client) client.disconnect(); } catch(_) {}
-
-      client = new tmi.Client({
-        connection: { secure: true, reconnect: true },
-        channels: [clean]
-      });
-
-      client.connect()
-        .then(() => {
-          statusBadge.textContent = `Connected: ${clean}`;
-          // update username label to reflect channel
-          document.querySelector(".username").textContent = clean;
-          if (eventLog.textContent === defaultName) eventLog.textContent = clean;
-        })
-        .catch(err => {
-          console.error("Twitch connect error", err);
-          statusBadge.textContent = "Not connected";
-          alert("Could not connect to Twitch. Check the channel name and try again.");
-        });
-
-      client.on("message", (chan, tags, message, self) => {
-        if (self) return;
-        handleCommand(tags, message);
-      });
-
-      client.on("connected", () => {
-        statusBadge.textContent = `Connected: ${clean}`;
-      });
-
-      client.on("disconnected", (reason) => {
-        statusBadge.textContent = `Disconnected (${reason||"unknown"})`;
+    function connectTwitch(channel){
+      statusBadge.textContent="Connecting…";
+      try{if(client)client.disconnect();}catch(_){}
+      client=new tmi.Client({connection:{secure:true,reconnect:true},channels:[channel]});
+      client.connect().then(()=>statusBadge.textContent=`Connected: ${channel}`).catch(()=>statusBadge.textContent="Not connected");
+      client.on("message",(chan,tags,msg,self)=>{
+        if(self)return;
+        handleCommand(tags,msg.trim());
       });
     }
 
-    /* ===== Command handling (exact match, case-sensitive) ===== */
-    function handleCommand(tags, message) {
-      const msg = (message || "").trim();   // DO NOT lowercase -> you asked for exact case-sensitive match
-      const user = (tags.username || "").toLowerCase();
-
-      // hit -> anyone; heal/reset -> mods/streamer/whitelist
-      if (msg === "hit" && !isOnCooldown(user, "hit")) {
-        currentHP = Math.max(0, currentHP - damage);
-        updateHP();
-        showEvent("ryaah got hit!", "hit");
-        shakeWrapper();
-        flashHPBar();
-        return;
+    function handleCommand(tags,msg){
+      const user=(tags.username||"").toLowerCase();
+      if(msg==="hit"&&!isOnCooldown(user,"hit")){
+        currentHP=Math.max(0,currentHP-damage);
+        updateHP("hit"); showEvent("ryaah got hit!","hit"); shakeWrapper(); flashHPBar();
       }
-
-      const isAllowed = !!(tags.mod || tags.badges?.broadcaster || whitelist.includes(user));
-      if (!isAllowed) return;
-
-      if (msg === "heal" && !isOnCooldown(user, "heal")) {
-        currentHP = Math.min(maxHP, currentHP + healAmount);
-        updateHP();
-        showEvent("ryaah got healed!", "heal");
-      }
-
-      if (msg === "reset" && !isOnCooldown(user, "reset")) {
-        currentHP = maxHP;
-        updateHP();
-        showEvent("ryaah HP reset!", "reset");
+      const isAllowed=tags.mod||tags.badges?.broadcaster||whitelist.includes(user);
+      if(isAllowed){
+        if(msg==="heal"&&!isOnCooldown(user,"heal")){
+          currentHP=Math.min(maxHP,currentHP+heal);
+          updateHP("heal"); showEvent("ryaah got healed!","heal");
+        }
+        if(msg==="reset"&&!isOnCooldown(user,"reset")){
+          currentHP=maxHP;
+          updateHP("reset"); showEvent("ryaah HP reset!","reset");
+        }
       }
     }
 
-    /* init UI */
-    updateHP();
+    updateHP("reset");
   </script>
 </body>
 </html>
