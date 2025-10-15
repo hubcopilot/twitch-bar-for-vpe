@@ -17,7 +17,7 @@
       font-family: Arial, Helvetica, sans-serif;
     }
 
-    /* Topbar */
+    /* Topbar (debug controls) */
     .topbar {
       position: fixed; top: 8px; left: 8px;
       display: flex; gap: 8px; align-items: center;
@@ -28,19 +28,19 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.25);
     }
     .topbar input { width: 220px; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; }
-    .topbar button { padding: 8px 12px; border: none; border-radius: 8px; background: #222; color: #fff; font-weight: bold; }
+    .topbar button { padding: 8px 12px; border: none; border-radius: 8px; background: #222; color: #fff; font-weight: bold; cursor: pointer; }
     .badge { font-size: 12px; padding: 6px 10px; border-radius: 999px; background: #eee; }
 
     /* Stage */
     .stage { min-height: 120px; display: flex; align-items: center; justify-content: center; padding-top: 64px; }
     .hp-wrapper { display: flex; flex-direction: column; align-items: center; }
 
-    /* Capsule Wrapper (black outline around everything) */
+    /* Capsule Wrapper */
     .hp-event-wrapper {
       width: 420px;
-      border: 2px solid #000;       /* black outline */
-      border-radius: 30px;          /* smooth capsule */
-      overflow: hidden;             /* clip children inside */
+      border: 2px solid #000;     
+      border-radius: 30px;        
+      overflow: hidden;           
       box-shadow: 0 6px 16px rgba(0,0,0,0.3);
     }
 
@@ -50,7 +50,6 @@
       background: var(--hp-bg);
       padding-left: 80px;
       position: relative;
-      border-radius: 30px 30px 0 0;
     }
     .hp-container {
       position: relative;
@@ -117,6 +116,20 @@
       font-size: 14px; font-weight: bold; color: var(--text);
     }
 
+    /* Capsule status (below username) */
+    .capsule-status {
+      position: absolute;
+      top: 78px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: bold;
+      color: #444;
+      opacity: 0.85;
+    }
+    .capsule-status.connected { color: #00aa00; }
+    .capsule-status.disconnected { color: #aa0000; }
+
     /* Event Panel */
     .event-panel {
       width: 100%; height: 42px;
@@ -168,7 +181,6 @@
 
   <div class="stage">
     <div class="hp-wrapper" id="hp-wrapper">
-      <!-- Capsule wrapper -->
       <div class="hp-event-wrapper">
         <!-- HP Panel -->
         <div class="hp-panel">
@@ -181,6 +193,7 @@
             <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png">
           </div>
           <div class="username">ryaah</div>
+          <div id="capsuleStatus" class="capsule-status disconnected">Disconnected</div>
         </div>
         <!-- Event Panel -->
         <div class="event-panel"><div id="event-log">ryaah</div></div>
@@ -196,12 +209,14 @@
     const eventLog = document.getElementById("event-log");
     const hpWrapper = document.getElementById("hp-wrapper");
     const statusBadge = document.getElementById("status");
+    const capsuleStatus = document.getElementById("capsuleStatus");
 
     let maxHP=1000, currentHP=1000;
     const damage=25, heal=25;
     const whitelist=["acek47shawty","shadowcast_dj"];
     const cooldowns={};
     let resetTimeout=null;
+    let client=null;
 
     function updateHP(mode="hit") {
       const percent=(currentHP/maxHP)*100;
@@ -209,10 +224,9 @@
       hpText.textContent=`HP: ${currentHP}/${maxHP}`;
 
       if(mode==="hit"){
-        // Grey lags, then fades
         hpBarGrey.style.width = percent+"%";
         hpBarGrey.classList.remove("fade");
-        void hpBarGrey.offsetWidth; // force reflow
+        void hpBarGrey.offsetWidth; 
         hpBarGrey.classList.add("fade");
         setTimeout(()=>{ hpBarGrey.classList.remove("fade"); },1000);
       }
@@ -227,7 +241,8 @@
       eventLog.classList.add("hidden");
       setTimeout(()=>{
         eventLog.textContent=msg;
-        eventLog.className=""; eventLog.id="event-log";
+        eventLog.className=""; 
+        eventLog.id="event-log";
         if(type) eventLog.classList.add(type);
         eventLog.classList.remove("hidden");
       },300);
@@ -235,7 +250,8 @@
         eventLog.classList.add("hidden");
         setTimeout(()=>{
           eventLog.textContent="ryaah";
-          eventLog.className=""; eventLog.id="event-log";
+          eventLog.className=""; 
+          eventLog.id="event-log";
           eventLog.classList.remove("hidden");
         },300);
       },5000);
@@ -243,22 +259,40 @@
 
     function shakeWrapper(){ hpWrapper.classList.add("shake"); setTimeout(()=>hpWrapper.classList.remove("shake"),600);}
     function flashHPBar(){ hpBar.classList.add("flash"); setTimeout(()=>hpBar.classList.remove("flash"),200); }
-    function isOnCooldown(user,cmd){ const now=Date.now(), key=user+"_"+cmd; if(cooldowns[key]&&now-cooldowns[key]<2000)return true; cooldowns[key]=now; return false;}
+    function isOnCooldown(user,cmd){ 
+      const now=Date.now(), key=user+"_"+cmd; 
+      if(cooldowns[key]&&now-cooldowns[key]<2000)return true; 
+      cooldowns[key]=now; return false;
+    }
 
-    let client=null;
     document.getElementById("connectBtn").addEventListener("click",()=>{
-      const ch=document.getElementById("channelInput").value.trim();
+      const ch=document.getElementById("channelInput").value.trim().toLowerCase();
       if(ch) connectTwitch(ch);
     });
 
     function connectTwitch(channel){
       statusBadge.textContent="Connecting…";
+      capsuleStatus.textContent="Connecting…";
+      capsuleStatus.className="capsule-status";
       try{if(client)client.disconnect();}catch(_){}
       client=new tmi.Client({connection:{secure:true,reconnect:true},channels:[channel]});
-      client.connect().then(()=>statusBadge.textContent=`Connected: ${channel}`).catch(()=>statusBadge.textContent="Not connected");
+      client.connect().then(()=>{
+        statusBadge.textContent=`Connected: ${channel}`;
+        capsuleStatus.textContent=`Connected: ${channel}`;
+        capsuleStatus.classList.add("connected");
+      }).catch(()=>{
+        statusBadge.textContent="Not connected";
+        capsuleStatus.textContent="Disconnected";
+        capsuleStatus.classList.add("disconnected");
+      });
       client.on("message",(chan,tags,msg,self)=>{
-        if(self)return;
+        if(self) return;
         handleCommand(tags,msg.trim());
+      });
+      client.on("disconnected",()=>{
+        statusBadge.textContent="Not connected";
+        capsuleStatus.textContent="Disconnected";
+        capsuleStatus.className="capsule-status disconnected";
       });
     }
 
