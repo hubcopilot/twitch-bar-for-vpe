@@ -108,7 +108,7 @@
             <div class="hp-container">
               <div id="hp-bar-grey" class="hp-bar-grey"></div>
               <div id="hp-bar" class="hp-bar"></div>
-              <div id="hp-text" class="hp-text">HP: 100/100</div>
+              <div id="hp-text" class="hp-text">HP: 500/500</div>
             </div>
             <div class="profile">
               <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/44235bd2-5335-48f6-9ac3-916e33349197-profile_image-70x70.png">
@@ -129,7 +129,7 @@
 
 <script>
 let client=null;
-let maxHP=100,currentHP=100;
+let maxHP=500,currentHP=500;
 const damage=25,heal=25;
 const whitelist=["acek47shawty","shadowcast_dj"];
 const cooldowns={};
@@ -152,7 +152,7 @@ function updateHP(mode="hit"){
     hpBarGrey.style.width=percent+"%";
     hpBarGrey.classList.remove("fade"); void hpBarGrey.offsetWidth;
     hpBarGrey.classList.add("fade");
-    setTimeout(()=>hpBarGrey.classList.remove("fade"),100);
+    setTimeout(()=>hpBarGrey.classList.remove("fade"),500);
   } else {
     hpBarGrey.style.width=percent+"%";
   }
